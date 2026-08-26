@@ -29,6 +29,7 @@ jobs:
           import json
           from datetime import datetime
           import requests
+          import time
           
           prices = {}
           errors = []
@@ -41,19 +42,36 @@ jobs:
           except Exception as e:
               errors.append(f"BTC: {str(e)}")
           
-          # Stocks - Yahoo Finance
+          # Stocks
           tickers = ['MSTY', 'TSLY', 'MSTR', 'SWC', 'MPJPY', 'ASST', 'STRD', 'STRK', 'STRC', 'SATA']
-          for ticker in tickers:
-              try:
-                  url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=price"
-                  r = requests.get(url, timeout=10)
-                  if r.status_code == 200:
-                      price = r.json()['quoteSummary']['result'][0]['price']['regularMarketPrice']['raw']
-                      prices[ticker] = round(price, 2)
-              except Exception as e:
-                  errors.append(f"{ticker}: Could not fetch")
           
-          # Save
+          for ticker in tickers:
+              price = None
+              
+              # Try Finnhub first
+              try:
+                  r = requests.get(f"https://finnhub.io/api/v1/quote?symbol={ticker}&token=demo", timeout=10)
+                  if r.status_code == 200 and r.json().get('c'):
+                      price = r.json()['c']
+              except:
+                  pass
+              
+              # Try Yahoo as fallback
+              if not price:
+                  try:
+                      r = requests.get(f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=price", timeout=10, headers={'User-Agent': 'Mozilla/5.0'})
+                      if r.status_code == 200:
+                          price = r.json()['quoteSummary']['result'][0]['price']['regularMarketPrice']['raw']
+                  except:
+                      pass
+              
+              if price:
+                  prices[ticker] = round(price, 2)
+              else:
+                  errors.append(f"{ticker}: Could not fetch")
+              
+              time.sleep(0.3)
+          
           data = {
               "prices": prices,
               "timestamp": datetime.utcnow().isoformat() + "Z",
@@ -62,8 +80,6 @@ jobs:
           
           with open('prices.json', 'w') as f:
               json.dump(data, f, indent=2)
-          
-          print(f"✓ Fetched {len(prices)} prices")
           EOF
       
       - name: Commit and push
