@@ -2,9 +2,8 @@ name: Update Prices Daily
 
 on:
   schedule:
-    # Runs every day at 10:00 AM UTC
     - cron: '0 10 * * *'
-  workflow_dispatch:  # Allow manual trigger
+  workflow_dispatch:
 
 jobs:
   update-prices:
@@ -12,22 +11,63 @@ jobs:
     
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
       
       - name: Install dependencies
-        run: pip install requests
+        run: pip install requests --quiet
       
       - name: Fetch live prices
-        run: python scripts/fetch_prices.py
+        run: |
+          python3 << 'EOF'
+          import json
+          from datetime import datetime
+          import requests
+          
+          prices = {}
+          errors = []
+          
+          # Crypto - CoinGecko
+          try:
+              r = requests.get("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd", timeout=10)
+              if r.status_code == 200:
+                  prices['BTC'] = r.json()['bitcoin']['usd']
+          except Exception as e:
+              errors.append(f"BTC: {str(e)}")
+          
+          # Stocks - Yahoo Finance
+          tickers = ['MSTY', 'TSLY', 'MSTR', 'SWC', 'MPJPY', 'ASST', 'STRD', 'STRK', 'STRC', 'SATA']
+          for ticker in tickers:
+              try:
+                  url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{ticker}?modules=price"
+                  r = requests.get(url, timeout=10)
+                  if r.status_code == 200:
+                      price = r.json()['quoteSummary']['result'][0]['price']['regularMarketPrice']['raw']
+                      prices[ticker] = round(price, 2)
+              except Exception as e:
+                  errors.append(f"{ticker}: Could not fetch")
+          
+          # Save
+          data = {
+              "prices": prices,
+              "timestamp": datetime.utcnow().isoformat() + "Z",
+              "errors": errors
+          }
+          
+          with open('prices.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          
+          print(f"✓ Fetched {len(prices)} prices")
+          print(json.dumps(prices, indent=2))
+          EOF
       
-      - name: Commit and push if changed
+      - name: Commit and push
         run: |
           git config user.name "Price Bot"
-          git config user.email "prices@agustragnar.com"
+          git config user.email "bot@agustragnar.com"
           git add prices.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Update prices - $(date +'%Y-%m-%d %H:%M:%S UTC')" && git push)
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Update prices - $(date +'%Y-%m-%d %H:%M UTC')" && git push)
