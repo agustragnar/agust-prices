@@ -1,7 +1,18 @@
 {
   "prices": {
-    "BTC": 78901
+    "BTC": 78900
   },
-  "timestamp": "2026-08-26T08:40:22.646383Z",
-  "errors": []
+  "timestamp": "2026-08-26T08:42:50.164739Z",
+  "errors": [
+    "MSTY: Could not fetch",
+    "TSLY: Could not fetch",
+    "MSTR: Could not fetch",
+    "SWC: Could not fetch",
+    "MPJPY: Could not fetch",
+    "ASST: Could not fetch",
+    "STRD: Could not fetch",
+    "STRK: Could not fetch",
+    "STRC: Could not fetch",
+    "SATA: Could not fetch"
+  ]
 }
