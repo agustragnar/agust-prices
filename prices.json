@@ -1,8 +1,8 @@
 {
   "prices": {
-    "BTC": 81292
+    "BTC": 80479
   },
-  "timestamp": "2026-09-19T10:06:27.077943Z",
+  "timestamp": "2026-09-20T10:05:54.315227Z",
   "errors": [
     "MSTY: Could not fetch",
     "TSLY: Could not fetch",
